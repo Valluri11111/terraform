@@ -5,18 +5,36 @@ resource "aws_instance" "terraform" {
     tags = {
         Name = "terraformm"
     }
-    # In this case mylaptop is local
-    # provisioner "local-exec" {
-    #     # command = "echo ${self.private_ip} >> public_ip.txt"
-    #     command = "echo $DevOps $class >> value.txt"
-    #     environment = {
-    #       DevOps = "terraform code"
-    #     }
-    #}
-    provisioner "local-exec" {
-        command = "echo 'Instance ID: ${self.id}' > instance_info.txt"
-   }
-}
+#     #In this case mylaptop is local
+#     provisioner "local-exec" {
+#         command = "echo ${self.private_ip} > public_ip.txt"  
+#     }
+
+    connection {
+        type = "ssh"
+        user = "ec2-user"
+        password = "DevOps321"
+        host = self.public_ip
+    }
+
+    # Provisioners will execute at the creation of instance
+    provisioner "remote-exec" {
+        inline = [
+            "sudo dnf install nginx -y",
+            "sudo dnf install mysql -y",
+            "systemctl start nginx"
+        ]
+      
+    }
+
+    provisioner "remote-exec" {
+        when = destroy
+        inline = [
+            "systemctl start nginx",
+        ]
+      
+    }
+} 
 resource "aws_security_group" "allow_ssh_terraform" {
     name        = "allow_sshh" #allow_ssh is already there in my account
     description = "Allow port number 22 for SSH access"
@@ -29,7 +47,6 @@ resource "aws_security_group" "allow_ssh_terraform" {
         cidr_blocks      = ["0.0.0.0/0"]
         ipv6_cidr_blocks = ["::/0"]
     }
-
     ingress {
         from_port        = 22
         to_port          = 22
@@ -38,6 +55,13 @@ resource "aws_security_group" "allow_ssh_terraform" {
         ipv6_cidr_blocks = ["::/0"]
     }
 
+    ingress {
+        from_port        = 80
+        to_port          = 80
+        protocol         = "tcp"
+        cidr_blocks      = ["0.0.0.0/0"] #allow from everyone
+        ipv6_cidr_blocks = ["::/0"]
+    }
     tags = {
         Name= "allow-sssh"
   }
